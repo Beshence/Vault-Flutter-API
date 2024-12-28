@@ -11,27 +11,24 @@ class BeshenceVaultInfo {
 
 class BeshenceVaultException implements Exception {
   int httpCode;
-  int code;
   String name;
   String description;
   Response<dynamic>? response;
 
-  BeshenceVaultException({required this.httpCode, required this.code, required this.name, required this.description, required this.response});
+  BeshenceVaultException({required this.httpCode, required this.name, required this.description, required this.response});
 
   BeshenceVaultException.fromResponse(this.response) :
         httpCode = response!.statusCode ?? 0,
-        code = response.data["error"]["code"],
         name = response.data["error"]["name"],
         description = response.data["error"]["description"];
 
   BeshenceVaultException.malformedResponse(this.response) :
         httpCode = response!.statusCode ?? 0,
-        code = 0,
         name = "malformed_response",
         description = "Server sent unexpected response.";
 
-  BeshenceVaultException.dioException() : httpCode = 0,
-        code = 0,
+  BeshenceVaultException.dioException() :
+        httpCode = 0,
         name = "connection_error",
         description = "We couldn't contact server.",
         response = null;
@@ -122,6 +119,22 @@ class BeshenceChain {
         throw BeshenceVaultException.fromResponse(response);
       }
       return data["response"]["event"];
+    } on DioException {
+      throw BeshenceVaultException.dioException();
+    }
+  }
+
+  Future<String> postEvent(Object event) async {
+    // we'll use it later for api versioning
+    BeshenceVaultInfo vaultInfo = await vault.vaultInfo;
+
+    try {
+      final response = await vault.dio.post("https://${vault.address}/api/v1.0/chain/$chainName/event", data: event);
+      final data = response.data;
+      if(response.statusCode != 200) {
+        throw BeshenceVaultException.fromResponse(response);
+      }
+      return data["response"]["event_id"];
     } on DioException {
       throw BeshenceVaultException.dioException();
     }
