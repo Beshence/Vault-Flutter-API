@@ -108,6 +108,23 @@ class BeshenceChain {
     }
   }
 
+  Future<String?> get firstEventId async {
+    // we'll use it later for api versioning
+    BeshenceVaultInfo vaultInfo = await vault.vaultInfo;
+
+    try {
+      final response = await vault.dio.get("https://${vault.address}/api/v1.0/chain/$chainName/first");
+      final data = response.data;
+      if(response.statusCode != 200) {
+        if(data["error"]["name"] == "no_events") return null;
+        throw BeshenceVaultException.fromResponse(response);
+      }
+      return data["response"]["first"];
+    } on DioException {
+      throw BeshenceVaultException.dioException();
+    }
+  }
+
   Future<dynamic> getEvent(String eventId) async {
     // we'll use it later for api versioning
     BeshenceVaultInfo vaultInfo = await vault.vaultInfo;
